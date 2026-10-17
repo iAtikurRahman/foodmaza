@@ -1,0 +1,4 @@
+# Local environment / secrets (compose reads .env automatically)
+.env
+
+# Docker volumes are external; nothing else to ignore at the root.

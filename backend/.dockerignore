@@ -1,0 +1,8 @@
+# Keep secrets and host-only files out of the image (env comes from compose)
+node_modules
+.env
+.env.*
+npm-debug.log*
+Dockerfile
+.dockerignore
+.git

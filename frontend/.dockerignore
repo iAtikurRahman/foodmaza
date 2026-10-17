@@ -1,0 +1,10 @@
+# Build context stays clean — env values come from ARG/compose, not local files
+node_modules
+.next
+.env
+.env.*
+!.env.example
+npm-debug.log*
+Dockerfile
+.dockerignore
+.git

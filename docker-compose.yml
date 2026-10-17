@@ -1,0 +1,56 @@
+services:
+  # PostgreSQL — the only service that must always run in Docker.
+  # Local `npm run dev` connects to it via localhost:${DB_PORT} (5433).
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-foodmaaza}
+    ports:
+      # Host 5433 -> container 5432 (5432 is taken by your system PostgreSQL)
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-foodmaaza}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # Express API — runs `prisma migrate deploy` on start, then the server.
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      PORT: 5001
+      CLIENT_URL: http://localhost:3000 # browser origin (CORS)
+      JWT_SECRET: ${JWT_SECRET:-foodmaaza-dev-jwt-secret}
+      # Inside the compose network the DB host is `db`, not localhost.
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-foodmaaza}?schema=public"
+    ports:
+      - "5001:5001"
+    volumes:
+      # Persists the transformers.js sentiment/embedding models across rebuilds
+      - ai_model_cache:/app/node_modules/@xenova/transformers/.cache
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Next.js — NEXT_PUBLIC_API_URL is baked in at build time and must be the
+  # host URL the browser uses (localhost:5001), not `backend:5001`.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5001/api}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  ai_model_cache:
