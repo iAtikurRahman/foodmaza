@@ -4,6 +4,12 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
+import authRoutes from './routes/auth.js';
+import menuRoutes from './routes/menu.js';
+import orderRoutes from './routes/orders.js';
+import reviewRoutes from './routes/reviews.js';
+import recommendationRoutes from './routes/recommendations.js';
+
 dotenv.config();
 
 const app = express();
@@ -11,7 +17,7 @@ const PORT = process.env.PORT || 5000;
 
 // ---- global middleware ----
 app.use(helmet()); // security headers
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5000' }));
+app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000' }));
 app.use(express.json({ limit: '1mb' }));
 
 // Generous global limiter (protects against accidental loops / scrapers)
@@ -36,6 +42,12 @@ app.use((req, _res, next) => {
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', uptime: Math.round(process.uptime()) });
 });
+
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/menu', menuRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // ---- 404 + error handling ----
 app.use((req, res) => {

@@ -1,0 +1,95 @@
+// Prisma schema — Foodmaza Restaurant Management System
+// Prisma 7: datasource URL lives in prisma7.config.ts (reads DATABASE_URL from .env)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+// Kitchen flow: PENDING -> COOKING -> READY (CANCELLED from PENDING/COOKING)
+enum OrderStatus {
+  PENDING
+  COOKING
+  READY
+  CANCELLED
+}
+
+// Fake payment: checkout flips this to PAID (no real gateway)
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+model User {
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  password  String // bcrypt hash
+  role      Role       @default(CUSTOMER)
+  createdAt DateTime   @default(now())
+  orders    Order[]
+  reviews   Review[]
+}
+
+model MenuItem {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  category    String? // e.g. "Starters", "Main Course", "Desserts", "Beverages"
+  available   Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id            String          @id @default(cuid())
+  customerId    String
+  customer      User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items         OrderItem[]
+  review        Review? // one review per order, left once READY
+  total         Float
+  status        OrderStatus     @default(PENDING)
+  paymentStatus PaymentStatus   @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  quantity   Int      @default(1)
+  price      Float // unit price snapshot at order time
+
+  @@index([orderId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orderId   String?  @unique // exactly one review per order (the customer's order card)
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  text      String
+  sentiment String? // AI result: 'POSITIVE' | 'NEGATIVE'
+  score     Float? // AI confidence 0..1
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // edits re-run AI sentiment analysis
+
+  @@index([sentiment])
+}
