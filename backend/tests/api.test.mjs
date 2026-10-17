@@ -1,5 +1,5 @@
 // End-to-end API test suite — dependency-free (Node 20+ global fetch).
-const API = process.env.API_URL || 'http://localhost:5001/api';
+const API = process.env.API_URL || 'http://localhost:5000/api';
 let pass = 0;
 let fail = 0;
 

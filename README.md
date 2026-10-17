@@ -7,12 +7,12 @@ FeastOS (Foodmaaza) is a full-stack Next.js and Node.js Restaurant Management Sy
 | Service   | Where it runs              | URL / connection                    |
 | --------- | -------------------------- | ----------------------------------- |
 | Frontend  | Next.js (`:3000`)          | http://localhost:3000               |
-| Backend   | Express (`:5001`)          | http://localhost:5001/api           |
+| Backend   | Express (`:5000`)          | http://localhost:5000/api           |
 | Database  | **Docker Compose only**    | host `localhost:5433` / container `db:5432` |
 
 Port notes:
 
-- Backend is **5001** (5000 is used by another local project).
+- Backend runs on **5000**, frontend on **3000** — configurable via `BACKEND_PORT` / `FRONTEND_PORT` in the root `.env`.
 - PostgreSQL is published on host port **5433** (5432 is used by the system PostgreSQL).
 
 ## Mode 1 — run backend & frontend locally (`npm run dev`)
@@ -25,7 +25,7 @@ docker compose up -d db
 
 # 2. backend — terminal 1
 cd backend
-npm run dev          # http://localhost:5001/api
+npm run dev          # http://localhost:5000/api
 
 # 3. frontend — terminal 2
 cd frontend
@@ -41,8 +41,8 @@ cd backend && npm run seed
 
 How the connection works in this mode:
 
-- `backend/.env` → `DATABASE_URL=...@localhost:5433/foodmaaza` (host port of the compose DB)
-- `frontend/.env` → `NEXT_PUBLIC_API_URL=http://localhost:5001/api` (browser calls the API directly)
+- `backend/.env` → `PORT=5000`, `DATABASE_URL=...@localhost:5433/foodmaaza` (host port of the compose DB)
+- `frontend/.env` → `NEXT_PUBLIC_API_URL=http://localhost:5000/api` (browser calls the API directly)
 
 ## Mode 2 — run everything with Docker (`docker compose up -d`)
 
@@ -57,7 +57,8 @@ This starts **db + backend + frontend** together. No local Node needed.
 How the connection works in this mode:
 
 - Backend gets `DATABASE_URL=...@db:5432/foodmaaza` from compose (service name = DB host)
-- Frontend image gets `NEXT_PUBLIC_API_URL` as a **build arg** (must stay browser-reachable: `http://localhost:5001/api`)
+- Frontend image gets `NEXT_PUBLIC_API_URL` as a **build arg** (must stay browser-reachable: `http://localhost:5000/api`)
+- Ports come from the root `.env` (`BACKEND_PORT=5000`, `FRONTEND_PORT=3000`); both Dockerfiles take all other values from env
 - Backend runs `prisma migrate deploy` automatically on every start
 
 ## Everyday commands
@@ -76,15 +77,18 @@ docker compose exec db psql -U postgres -d foodmaaza   # open psql
 
 | File                     | Used by                              | Key values                                                                 |
 | ------------------------ | ------------------------------------ | -------------------------------------------------------------------------- |
-| `backend/.env`           | local `npm run dev`                  | `PORT=5001`, `DATABASE_URL=...@localhost:5433/...`, `JWT_SECRET`            |
-| `frontend/.env`          | local `npm run dev`                  | `NEXT_PUBLIC_API_URL=http://localhost:5001/api`                             |
-| `.env` (project root)    | `docker compose` interpolation       | `POSTGRES_*`, `DB_PORT`, `JWT_SECRET`, `NEXT_PUBLIC_API_URL`                |
+| `backend/.env`           | local `npm run dev`                  | `PORT=5000`, `DATABASE_URL=...@localhost:5433/...`, `JWT_SECRET`            |
+| `frontend/.env`          | local `npm run dev`                  | `NEXT_PUBLIC_API_URL=http://localhost:5000/api`                             |
+| `.env` (project root)    | `docker compose` interpolation       | `POSTGRES_*`, `DB_PORT`, `JWT_SECRET`, `BACKEND_PORT`, `FRONTEND_PORT`, `CLIENT_URL`, `NEXT_PUBLIC_API_URL` |
 | `docker-compose.yml`     | Docker mode backend                  | sets `DATABASE_URL=...@db:5432/...` (overrides for the container network)   |
+| `backend/Dockerfile`     | Docker backend image                 | `PORT` build arg (default 5000), placeholder `DATABASE_URL` for `prisma generate` |
+| `frontend/Dockerfile`    | Docker frontend image                | `NEXT_PUBLIC_API_URL` build arg (default `:5000/api`), `PORT` (default 3000) |
 
 **Never commit real secrets** — root `.env` and `backend/.env` are gitignored; see `.env.example` and `backend/.env.example`.
 
 ### Changing ports
 
-- API port: `backend/.env` `PORT` + `NEXT_PUBLIC_API_URL` (frontend) + `docker-compose.yml` backend `ports`
+- API port: root `.env` `BACKEND_PORT` (Docker) or `backend/.env` `PORT` (local) + `NEXT_PUBLIC_API_URL` (frontend)
+- Frontend port: root `.env` `FRONTEND_PORT` + `CLIENT_URL` (CORS origin)
 - DB port: root `.env` `DB_PORT` + `backend/.env` `DATABASE_URL`
 - After changing `NEXT_PUBLIC_API_URL` for Docker mode, rebuild: `docker compose build frontend`

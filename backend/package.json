@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node tests/api.test.mjs",
+    "test": "node --env-file-if-exists=.env tests/api.test.mjs",
     "start": "node index.js",
     "dev": "nodemon index.js",
     "seed": "node scripts/seed.js"

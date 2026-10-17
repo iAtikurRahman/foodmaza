@@ -3,7 +3,7 @@ import axios from "axios";
 /**
  * Single Axios instance used by the whole app.
  *
- * - `baseURL` comes from .env (NEXT_PUBLIC_API_URL = http://localhost:5001/api)
+ * - `baseURL` comes from .env (NEXT_PUBLIC_API_URL = http://localhost:5000/api)
  * - The JWT is attached automatically to every request
  * - A 401 caused by a stored token means the token expired/is invalid,
  *   so we clear it and broadcast an event AuthContext listens to.
@@ -27,7 +27,7 @@ export function clearToken() {
 
 /** Base URL shared by axios and the raw-fetch SSE stream client. */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
